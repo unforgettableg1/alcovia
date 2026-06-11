@@ -1,0 +1,134 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "focus-complete",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cdc18330-0180-4aa9-ac2e-7b15f7e2e014",
+      "name": "Webhook",
+      "webhookId": "4eea0818-d94a-49cc-a876-8a1eea2a743f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst sessionId = body.sessionId;\nconst streak = body.streak;\nconst coins = body.coins;\n\n// Deduplication check using static storage\nif (!$workflow.staticData.processedSessions) {\n  $workflow.staticData.processedSessions = {};\n}\n\nif ($workflow.staticData.processedSessions[sessionId]) {\n  return [{ json: { skipped: true, reason: 'already processed', sessionId } }];\n}\n\n// Mark as processed\n$workflow.staticData.processedSessions[sessionId] = true;\n\nreturn [{\n  json: {\n    skipped: false,\n    sessionId,\n    message: `Streak now ${streak} days, +50 coins. Total coins: ${coins}`,\n    studentId: body.studentId,\n    minutesFocused: body.minutesFocused,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "cefd30df-5e98-4127-bd0f-cb9f3f79de3c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c09bd8db-b9e9-43ce-87fe-e706f4a492e4",
+              "leftValue": "={{ $json.skipped }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "eace2676-872f-4b5a-bd77-7804bf95face",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/notify-log",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"message\": \"{{ $json.message }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        -53.25388814721791
+      ],
+      "id": "b0f64bd6-81dc-432b-b7ca-a755a1856a8c",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a6b7ebe3-90d6-4451-98bb-7f0f55973598",
+  "meta": {
+    "instanceId": "47ee1ba7fead04dd53d61323e129633bbe70cceef8effc50d0560ba35d5ae104"
+  },
+  "id": "2YVFfohziyv7aHhR",
+  "tags": []
+}
